@@ -1,38 +1,52 @@
 package com.fiap.authservice.auth.infrastructure.security;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.Base64;
-import java.util.UUID;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
+import com.fiap.authservice.auth.application.port.out.TokenGeneratorPort;
+import com.fiap.authservice.auth.domain.model.User;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.Date;
+import java.util.UUID;
+
 @Component
-public class JwtTokenService {
+public class JwtTokenService implements TokenGeneratorPort {
 
-    private static final String SECRET = "change-me-for-production";
+    private final JwtProperties properties;
 
-    public String generate(String subject) {
-        String header = base64Url("{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
-        long now = Instant.now().getEpochSecond();
-        String payload = base64Url("{\"sub\":\"" + subject + "\",\"iat\":" + now + ",\"jti\":\"" + UUID.randomUUID() + "\"}");
-        String unsignedToken = header + "." + payload;
-        return unsignedToken + "." + sign(unsignedToken);
+    public JwtTokenService(JwtProperties properties) {
+        this.properties = properties;
     }
 
-    private String sign(String data) {
-        try {
-            Mac hmac = Mac.getInstance("HmacSHA256");
-            hmac.init(new SecretKeySpec(SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            byte[] signature = hmac.doFinal(data.getBytes(StandardCharsets.UTF_8));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(signature);
-        } catch (Exception exception) {
-            throw new IllegalStateException("Falha ao gerar token", exception);
-        }
+    @Override
+    public String generate(User user) {
+        Instant now = Instant.now();
+        Instant expiration = now.plusSeconds(properties.expirationSeconds());
+
+        return Jwts.builder()
+                .subject(user.getId().toString())
+                .claim("email", user.getEmail().value())
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(expiration))
+                .signWith(signingKey())
+                .compact();
     }
 
-    private String base64Url(String value) {
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(value.getBytes(StandardCharsets.UTF_8));
+    public UUID extractSubject(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(signingKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return UUID.fromString(claims.getSubject());
+    }
+
+    private SecretKey signingKey() {
+        return Keys.hmacShaKeyFor(properties.secret().getBytes(StandardCharsets.UTF_8));
     }
 }
