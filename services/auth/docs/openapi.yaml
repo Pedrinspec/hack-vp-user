@@ -1,0 +1,489 @@
+openapi: 3.0.3
+info:
+  title: Auth Service API
+  version: 1.0.0
+  description: |
+    Especificação dos fluxos de autenticação do serviço `auth`.
+
+    ## Fluxos cobertos
+    - Registro de usuário (`register`)
+    - Login (`login`)
+    - Renovação de tokens (`refresh`)
+    - Logout (`logout`)
+    - Recuperação de senha (`forgot password`)
+    - Redefinição de senha (`reset password`)
+    - Perfil autenticado (`me`)
+
+    ## Padrão de erro
+    Todas as respostas de erro seguem o schema `ErrorResponse` com os campos:
+    - `code`: identificador estável do erro
+    - `message`: mensagem legível para cliente
+    - `trace_id`: identificador para rastreabilidade observável
+servers:
+  - url: https://api.example.com
+    description: Produção
+  - url: http://localhost:3000
+    description: Desenvolvimento
+
+tags:
+  - name: Auth
+    description: Endpoints de autenticação e sessão
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Registrar novo usuário
+      operationId: registerUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Usuário registrado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: E-mail já cadastrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                emailAlreadyExists:
+                  value:
+                    code: AUTH_EMAIL_ALREADY_EXISTS
+                    message: Já existe uma conta com este e-mail.
+                    trace_id: 6a7f9e88db404335a2bafe2f6cc4a6c2
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Autenticar usuário
+      operationId: loginUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login realizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Credenciais inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidCredentials:
+                  value:
+                    code: AUTH_INVALID_CREDENTIALS
+                    message: E-mail ou senha inválidos.
+                    trace_id: 317f72f8d6c84f9aaf89d01f2703d653
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Renovar token de acesso
+      operationId: refreshToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Tokens renovados com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Refresh token inválido, expirado ou revogado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRefreshToken:
+                  value:
+                    code: AUTH_INVALID_REFRESH_TOKEN
+                    message: Refresh token inválido ou expirado.
+                    trace_id: a3c5ee804a0e4dd9ae4b0fb919f2d8d2
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Encerrar sessão do usuário autenticado
+      operationId: logoutUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '204':
+          description: Sessão encerrada com sucesso
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Solicitar recuperação de senha
+      operationId: forgotPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '202':
+          description: Solicitação recebida (resposta genérica para evitar enumeração)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Redefinir senha com token de recuperação
+      operationId: resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Senha redefinida com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Token de reset inválido ou expirado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidResetToken:
+                  value:
+                    code: AUTH_INVALID_RESET_TOKEN
+                    message: Token de redefinição inválido ou expirado.
+                    trace_id: 233cf76dfdbf4d8e9155c17f76ec77f9
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Obter dados do usuário autenticado
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dados do usuário autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message, trace_id]
+      properties:
+        code:
+          type: string
+          description: Código estável para tratamento no cliente
+          example: AUTH_INVALID_CREDENTIALS
+        message:
+          type: string
+          description: Mensagem legível para exibição ou log
+          example: E-mail ou senha inválidos.
+        trace_id:
+          type: string
+          description: Correlation ID para rastreamento distribuído
+          example: 5be4f9e4c6b24d6eb2ff5ec69e2baeb5
+
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+
+    RefreshRequest:
+      type: object
+      additionalProperties: false
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          minLength: 20
+          description: Refresh token válido previamente emitido
+
+    LogoutRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        refresh_token:
+          type: string
+          minLength: 20
+          description: Opcional para revogação explícita do refresh token atual
+
+    ForgotPasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [token, new_password]
+      properties:
+        token:
+          type: string
+          minLength: 20
+          description: Token de recuperação recebido por e-mail
+        new_password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, email, name, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TokenPair:
+      type: object
+      additionalProperties: false
+      required: [access_token, refresh_token, token_type, expires_in]
+      properties:
+        access_token:
+          type: string
+          description: JWT de acesso
+        refresh_token:
+          type: string
+          description: Token para renovação de sessão
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_in:
+          type: integer
+          minimum: 1
+          description: Tempo de expiração do access token, em segundos
+
+    AuthResponse:
+      type: object
+      additionalProperties: false
+      required: [user, tokens]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        tokens:
+          $ref: '#/components/schemas/TokenPair'
+
+    RefreshResponse:
+      type: object
+      additionalProperties: false
+      required: [tokens]
+      properties:
+        tokens:
+          $ref: '#/components/schemas/TokenPair'
+
+    UserProfileResponse:
+      type: object
+      additionalProperties: false
+      required: [user]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+
+    MessageResponse:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+          example: Se o e-mail existir, você receberá instruções para redefinir a senha.
+
+  responses:
+    BadRequest:
+      description: Payload inválido (erro de parsing ou formato)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            badRequest:
+              value:
+                code: AUTH_BAD_REQUEST
+                message: Requisição inválida.
+                trace_id: 22429f95f4f2418ea53f2f7ab915de4d
+
+    Unauthorized:
+      description: Falha de autenticação
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unauthorized:
+              value:
+                code: AUTH_UNAUTHORIZED
+                message: Não autenticado.
+                trace_id: bdc76e6f3f1a4327af8d17395d4d8d77
+
+    UnprocessableEntity:
+      description: Violação de regra de negócio/validação semântica
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            validationError:
+              value:
+                code: AUTH_VALIDATION_ERROR
+                message: Os dados enviados não atendem às regras de validação.
+                trace_id: 0e0f8f90002644d093f26d4f753784cf
+
+    TooManyRequests:
+      description: Limite de tentativas excedido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            rateLimited:
+              value:
+                code: AUTH_RATE_LIMITED
+                message: Muitas tentativas. Tente novamente mais tarde.
+                trace_id: 8335a9d25b1f4ed0b14c5d1a2277a18f
+
+    InternalServerError:
+      description: Erro interno não esperado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unexpected:
+              value:
+                code: AUTH_INTERNAL_ERROR
+                message: Erro interno.
+                trace_id: 3852c3af8fbd4f99ad5cca78dcf25f19
