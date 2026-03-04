@@ -1,42 +1,35 @@
 package com.fiap.authservice.auth.infrastructure.jpa;
 
 import com.fiap.authservice.auth.application.port.out.UserRepositoryPort;
-import com.fiap.authservice.auth.domain.entity.User;
+import com.fiap.authservice.auth.domain.model.User;
+import com.fiap.authservice.auth.domain.valueobject.Email;
 import com.fiap.authservice.auth.infrastructure.mapper.UserMapper;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
 
 import java.util.Optional;
-import java.util.UUID;
 
-@Repository
+@Component
 public class UserRepositoryAdapter implements UserRepositoryPort {
 
-    private final SpringDataUserRepository springDataUserRepository;
-    private final UserMapper userMapper;
+    private final SpringDataUserRepository repository;
 
-    public UserRepositoryAdapter(SpringDataUserRepository springDataUserRepository, UserMapper userMapper) {
-        this.springDataUserRepository = springDataUserRepository;
-        this.userMapper = userMapper;
+    public UserRepositoryAdapter(SpringDataUserRepository repository) {
+        this.repository = repository;
+    }
+
+    @Override
+    public boolean existsByEmail(Email email) {
+        return repository.existsByEmail(email.value());
     }
 
     @Override
     public User save(User user) {
-        var persisted = springDataUserRepository.save(userMapper.toJpaEntity(user));
-        return userMapper.toDomainEntity(persisted);
+        UserJpaEntity saved = repository.save(UserMapper.toEntity(user));
+        return UserMapper.toDomain(saved);
     }
 
     @Override
-    public Optional<User> findById(UUID id) {
-        return springDataUserRepository.findById(id).map(userMapper::toDomainEntity);
-    }
-
-    @Override
-    public Optional<User> findByEmail(String email) {
-        return springDataUserRepository.findByEmailIgnoreCase(email).map(userMapper::toDomainEntity);
-    }
-
-    @Override
-    public boolean existsByEmail(String email) {
-        return springDataUserRepository.existsByEmailIgnoreCase(email);
+    public Optional<User> findByEmail(Email email) {
+        return repository.findByEmail(email.value()).map(UserMapper::toDomain);
     }
 }
