@@ -1,18 +1,17 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:authdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: jdbc:mysql://localhost:3306/video_auth
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
-  h2:
-    console:
-      enabled: true
+  flyway:
+    enabled: true
 
 security:
   jwt:
-    secret: "my-super-secret-jwt-key-with-at-least-32-bytes"
-    expiration-minutes: 60
+    secret: "change-me-super-secret-key"
+    issuer: "auth-service"
