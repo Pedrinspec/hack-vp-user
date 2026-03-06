@@ -1,49 +1,59 @@
 package com.example.authservice.auth.domain.entity;
 
-import com.example.authservice.auth.domain.vo.Email;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.Instant;
-import java.util.Objects;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
-public final class User {
+@Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class User implements UserDetails {
 
-    private final UUID id;
-    private final Email email;
-    private final String passwordHash;
-    private final Instant createdAt;
+    private UUID id;
+    private String name;
+    private String email;
+    private String password;
 
-    private User(UUID id, Email email, String passwordHash, Instant createdAt) {
-        this.id = Objects.requireNonNull(id, "id cannot be null");
-        this.email = Objects.requireNonNull(email, "email cannot be null");
-        this.passwordHash = Objects.requireNonNull(passwordHash, "password hash cannot be null");
-        this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of();
     }
 
-    public static User create(Email email, String passwordHash) {
-        if (passwordHash.isBlank()) {
-            throw new IllegalArgumentException("Password hash cannot be blank");
-        }
-        return new User(UUID.randomUUID(), email, passwordHash, Instant.now());
-    }
-
-    public static User restore(UUID id, Email email, String passwordHash, Instant createdAt) {
-        return new User(id, email, passwordHash, createdAt);
-    }
-
-    public UUID id() {
-        return id;
-    }
-
-    public Email email() {
+    @Override
+    public String getUsername() {
         return email;
     }
 
-    public String passwordHash() {
-        return passwordHash;
+    @Override
+    public String getPassword() {
+        return password;
     }
 
-    public Instant createdAt() {
-        return createdAt;
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
     }
 }
