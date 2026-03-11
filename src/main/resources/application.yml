@@ -1,8 +1,10 @@
 spring:
+  application:
+    name: hack-vp-user
   datasource:
-    url: jdbc:mysql://localhost:3306/video_auth
-    username: root
-    password: admin
+    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/video_auth}
+    username: ${DATABASE_USER:root}
+    password: ${DATABASE_PASSWORD:admin}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -13,5 +15,5 @@ spring:
 
 security:
   jwt:
-    secret: "change-me-super-secret-key"
-    issuer: "auth-service"
+    secret: ${JWT_SECRET:change-me-super-secret-key}
+    issuer: ${JWT_ISSUER:auth-service}

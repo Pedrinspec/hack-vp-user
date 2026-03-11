@@ -1,0 +1,71 @@
+# =============================================================================
+# hack-vp-user — Docker Compose
+# Orquestra: hack-vp-user app + MySQL 8
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # MySQL 8 — banco de dados de usuários
+  # ---------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: hack-vp-user-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD:-admin}
+      MYSQL_DATABASE: video_auth
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - vp-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DATABASE_PASSWORD:-admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # hack-vp-user Application — Spring Boot 3 + JWT
+  # ---------------------------------------------------------------------------
+  hack-vp-user:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    image: hack-vp-user:latest
+    container_name: hack-vp-user-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      # Banco de dados
+      DATABASE_URL: ${DATABASE_URL:-jdbc:mysql://mysql:3306/video_auth?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America/Sao_Paulo}
+      DATABASE_USER: ${DATABASE_USER:-root}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-admin}
+
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-change-me-super-secret-key}
+      JWT_ISSUER: ${JWT_ISSUER:-auth-service}
+
+      # JVM tunning adicional
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    ports:
+      - "8080:8080"
+    networks:
+      - vp-network
+
+# =============================================================================
+# Volumes persistentes
+# =============================================================================
+volumes:
+  mysql-data:
+
+# =============================================================================
+# Rede interna isolada
+# =============================================================================
+networks:
+  vp-network:
+    external: true
