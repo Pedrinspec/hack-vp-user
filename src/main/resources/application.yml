@@ -17,3 +17,21 @@ security:
   jwt:
     secret: ${JWT_SECRET:change-me-super-secret-key}
     issuer: ${JWT_ISSUER:auth-service}
+
+management:
+  endpoint:
+    health:
+      show-details: "ALWAYS"
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+probe:
+  path: /actuator/health
+  port: http
+  initialDelaySecondsLiveness: 120
+  initialDelaySecondsReadness: 120
