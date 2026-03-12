@@ -3,6 +3,7 @@ package com.fiap.authservice.infrastructure.controller;
 import com.fiap.authservice.application.dto.AuthRequest;
 import com.fiap.authservice.application.dto.TokenResponse;
 import com.fiap.authservice.application.usecase.CreateUserUseCase;
+import com.fiap.authservice.domain.entity.User;
 import com.fiap.authservice.infrastructure.security.TokenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 @Tag(name = "Autenticação", description = "Endpoints para cadastro e login de usuários")
 public class AuthController {
@@ -58,10 +61,16 @@ public class AuthController {
                     @ApiResponse(responseCode = "400", description = "Dados inválidos", content = @Content)
             }
     )
+
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody AuthRequest request) {
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password()));
-        String token = tokenService.generateToken((org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal());
+
+        User user = (User) authentication.getPrincipal();
+
+        String token = tokenService.generateToken(user);
+
         return ResponseEntity.ok(new TokenResponse(token));
     }
 }

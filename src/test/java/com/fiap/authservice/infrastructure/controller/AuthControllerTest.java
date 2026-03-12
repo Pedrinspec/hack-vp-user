@@ -3,6 +3,7 @@ package com.fiap.authservice.infrastructure.controller;
 import com.fiap.authservice.application.dto.AuthRequest;
 import com.fiap.authservice.application.dto.TokenResponse;
 import com.fiap.authservice.application.usecase.CreateUserUseCase;
+import com.fiap.authservice.domain.entity.User;
 import com.fiap.authservice.infrastructure.security.TokenService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,9 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.User;
 
 import java.util.Collections;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -46,7 +47,7 @@ class AuthControllerTest {
     @Test
     void shouldLoginAndReturnTokenWhenCredentialsAreValid() {
         AuthRequest request = new AuthRequest(null, "user@email.com", "123456");
-        User principal = new User("user@email.com", "encoded", Collections.emptyList());
+        User principal = new User(UUID.randomUUID(), "nome", "user@email.com", "123456");
 
         when(authenticationManager.authenticate(any())).thenReturn(authentication);
         when(authentication.getPrincipal()).thenReturn(principal);
@@ -67,6 +68,6 @@ class AuthControllerTest {
         when(authenticationManager.authenticate(any())).thenThrow(new BadCredentialsException("invalid"));
 
         assertThrows(BadCredentialsException.class, () -> authController.login(request));
-        verify(tokenService, never()).generateToken(any(org.springframework.security.core.userdetails.UserDetails.class));
+        verify(tokenService, never()).generateToken(any(User.class));
     }
 }
