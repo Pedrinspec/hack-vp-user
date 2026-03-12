@@ -45,4 +45,17 @@ public class TokenService {
             return null;
         }
     }
+
+    public String validateTokenEmail(String token) {
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+            DecodedJWT decodedJWT = JWT.require(algorithm)
+                    .withIssuer(issuer)
+                    .build()
+                    .verify(token);
+            return decodedJWT.getClaim("email").asString();
+        } catch (JWTVerificationException ex) {
+            return null;
+        }
+    }
 }
