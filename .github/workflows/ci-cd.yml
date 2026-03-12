@@ -118,17 +118,12 @@ jobs:
       - name: Buscar parâmetros do Cognito no SSM
         id: cognito-params
         run: |
-          USER_POOL_ID=$(aws ssm get-parameter \
-            --name "/hack-vp/sandbox/cognito/user-pool-id" \
-            --query "Parameter.Value" --output text)
-          COGNITO_REGION=$(aws ssm get-parameter \
-            --name "/hack-vp/sandbox/cognito/region" \
+          JWT_ISSUER=$(aws ssm get-parameter \
+            --name "/hack-vp/sandbox/cognito/jwt-issuer" \
             --query "Parameter.Value" --output text)
           JWT_SECRET=$(aws ssm get-parameter \
             --name "/hack-vp/sandbox/cognito/jwt-secret" \
             --with-decryption --query "Parameter.Value" --output text)
-
-          JWT_ISSUER="https://cognito-idp.${COGNITO_REGION}.amazonaws.com/${USER_POOL_ID}"
 
           echo "::add-mask::${JWT_SECRET}"
           echo "jwt_issuer=${JWT_ISSUER}"   >> $GITHUB_OUTPUT
